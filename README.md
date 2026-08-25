@@ -30,10 +30,25 @@
 
 Интерактивный дашборд на **Streamlit** (не статическая HTML — ~125k записей слишком тяжёлы для одной HTML-страницы в браузере).
 
+### Windows (без Git)
+
+1. Скачай ZIP: https://github.com/TemeshevProject/DAMU_Projects/archive/refs/heads/main.zip
+2. Распакуй в `C:\Users\DELL\DAMU_Projects`
+3. Установи Python: https://www.python.org/downloads/ — при установке отметь **Add Python to PATH**
+4. Открой **Командную строку** в папке проекта и запусти:
+
+```bat
+setup_and_run.bat
+```
+
+5. Открой в браузере: http://localhost:8501
+
+### Linux / macOS
+
 ```bash
 pip install -r requirements.txt
 python3 -m damu_parser.cli --download --parse   # если данных ещё нет
-streamlit run dashboard/app.py
+./run_dashboard.sh
 ```
 
 Откроется в браузере (`http://localhost:8501`):
