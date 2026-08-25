@@ -26,6 +26,12 @@
 - `program`, `year`, `month` — программа и период
 - `support_type` — subsidization / guarantee
 
+## Деплой в облако (ссылка для коллег)
+
+Чтобы **отправить дашборд ссылкой** без установки Python — см. **[DEPLOY_STREAMLIT.md](DEPLOY_STREAMLIT.md)**.
+
+Кратко: https://share.streamlit.io → подключить репозиторий → main file: `streamlit_app.py` → получить ссылку `https://ваше-имя.streamlit.app`.
+
 ## Дашборд
 
 Интерактивный дашборд на **Streamlit** (не статическая HTML — ~125k записей слишком тяжёлы для одной HTML-страницы в браузере).

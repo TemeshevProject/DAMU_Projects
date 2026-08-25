@@ -21,7 +21,7 @@ SUPPORT_LABELS = {
 }
 
 
-@st.cache_data(show_spinner="Загрузка данных...")
+@st.cache_data(show_spinner="Загрузка данных ДАМУ (при первом запуске может занять 1–2 минуты)...")
 def get_data() -> pd.DataFrame:
     return load_projects()
 

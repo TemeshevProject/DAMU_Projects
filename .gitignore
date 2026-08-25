@@ -1,5 +1,8 @@
 data/raw/
-data/processed/
+data/processed/damu_projects.csv
+data/processed/damu_projects.json
+data/processed/summary.json
+data/processed_test/
 *.xlsx
 __pycache__/
 *.pyc

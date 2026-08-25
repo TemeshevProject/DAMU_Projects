@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from damu_parser.cloud_bootstrap import bootstrap_data_from_damu, PARQUET_PATH as CLOUD_PARQUET
+
 DEFAULT_DATA_DIR = Path("data/processed")
 CSV_PATH = DEFAULT_DATA_DIR / "damu_projects.csv"
 PARQUET_PATH = DEFAULT_DATA_DIR / "damu_projects.parquet"
@@ -54,8 +56,11 @@ COLUMN_LABELS = {
 
 
 def ensure_parquet(csv_path: Path = CSV_PATH, parquet_path: Path = PARQUET_PATH) -> Path:
-    if parquet_path.exists() and parquet_path.stat().st_mtime >= csv_path.stat().st_mtime:
+    if parquet_path.exists() and csv_path.exists() and parquet_path.stat().st_mtime >= csv_path.stat().st_mtime:
         return parquet_path
+
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Нет файла {csv_path}")
 
     df = pd.read_csv(csv_path, low_memory=False)
     numeric_cols = ["credit_amount", "guarantee_amount"]
@@ -72,16 +77,19 @@ def ensure_parquet(csv_path: Path = CSV_PATH, parquet_path: Path = PARQUET_PATH)
 
 
 def load_projects(data_dir: Path = DEFAULT_DATA_DIR) -> pd.DataFrame:
-    csv_path = data_dir / "damu_projects.csv"
     parquet_path = data_dir / "damu_projects.parquet"
+    csv_path = data_dir / "damu_projects.csv"
 
-    if not csv_path.exists():
-        raise FileNotFoundError(
-            f"Нет файла {csv_path}. Сначала выполните: python3 -m damu_parser.cli --download --parse"
-        )
+    if parquet_path.exists():
+        return pd.read_parquet(parquet_path)
 
-    ensure_parquet(csv_path, parquet_path)
-    return pd.read_parquet(parquet_path)
+    if csv_path.exists():
+        ensure_parquet(csv_path, parquet_path)
+        return pd.read_parquet(parquet_path)
+
+    # Облако: скачать с damu.kz при первом запуске
+    bootstrap_data_from_damu()
+    return pd.read_parquet(CLOUD_PARQUET)
 
 
 def format_amount(value: float | int | None) -> str:
