@@ -26,6 +26,21 @@
 - `program`, `year`, `month` — программа и период
 - `support_type` — subsidization / guarantee
 
+## Дашборд
+
+Интерактивный дашборд на **Streamlit** (не статическая HTML — ~125k записей слишком тяжёлы для одной HTML-страницы в браузере).
+
+```bash
+pip install -r requirements.txt
+python3 -m damu_parser.cli --download --parse   # если данных ещё нет
+streamlit run dashboard/app.py
+```
+
+Откроется в браузере (`http://localhost:8501`):
+- фильтры: регион, ОКЭД, банк, программа, год, сумма
+- графики: регионы, ОКЭД, динамика по годам
+- детальная таблица с экспортом CSV
+
 ## Установка
 
 ```bash

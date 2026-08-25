@@ -1,0 +1,90 @@
+"""Подготовка данных для дашборда."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pandas as pd
+
+DEFAULT_DATA_DIR = Path("data/processed")
+CSV_PATH = DEFAULT_DATA_DIR / "damu_projects.csv"
+PARQUET_PATH = DEFAULT_DATA_DIR / "damu_projects.parquet"
+
+DISPLAY_COLUMNS = [
+    "company_name",
+    "legal_form",
+    "project_name",
+    "project_type",
+    "oked_code",
+    "oked_division",
+    "oked_subclass",
+    "region",
+    "district",
+    "bank",
+    "business_size",
+    "credit_amount",
+    "guarantee_amount",
+    "program",
+    "year",
+    "month",
+    "support_type",
+    "source_file",
+]
+
+COLUMN_LABELS = {
+    "company_name": "Компания",
+    "legal_form": "ОПФ",
+    "project_name": "Проект",
+    "project_type": "Цель кредита",
+    "oked_code": "Код ОКЭД",
+    "oked_division": "Раздел ОКЭД",
+    "oked_subclass": "Подкласс ОКЭД",
+    "region": "Регион",
+    "district": "Район",
+    "bank": "Банк",
+    "business_size": "Размер бизнеса",
+    "credit_amount": "Сумма кредита, ₸",
+    "guarantee_amount": "Сумма гарантии, ₸",
+    "program": "Программа",
+    "year": "Год",
+    "month": "Месяц",
+    "support_type": "Тип поддержки",
+    "source_file": "Источник",
+}
+
+
+def ensure_parquet(csv_path: Path = CSV_PATH, parquet_path: Path = PARQUET_PATH) -> Path:
+    if parquet_path.exists() and parquet_path.stat().st_mtime >= csv_path.stat().st_mtime:
+        return parquet_path
+
+    df = pd.read_csv(csv_path, low_memory=False)
+    numeric_cols = ["credit_amount", "guarantee_amount"]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if "year" in df.columns:
+        df["year"] = pd.to_numeric(df["year"], errors="coerce").astype("Int64")
+
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(parquet_path, index=False)
+    return parquet_path
+
+
+def load_projects(data_dir: Path = DEFAULT_DATA_DIR) -> pd.DataFrame:
+    csv_path = data_dir / "damu_projects.csv"
+    parquet_path = data_dir / "damu_projects.parquet"
+
+    if not csv_path.exists():
+        raise FileNotFoundError(
+            f"Нет файла {csv_path}. Сначала выполните: python3 -m damu_parser.cli --download --parse"
+        )
+
+    ensure_parquet(csv_path, parquet_path)
+    return pd.read_parquet(parquet_path)
+
+
+def format_amount(value: float | int | None) -> str:
+    if value is None or pd.isna(value):
+        return "—"
+    return f"{value:,.0f}".replace(",", " ")
