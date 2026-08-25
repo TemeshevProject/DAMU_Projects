@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from dashboard.data import COLUMN_LABELS, DISPLAY_COLUMNS, format_amount, load_projects
+from dashboard.data import COLUMN_LABELS, DISPLAY_COLUMNS, format_amount, format_amount_compact, load_projects
 
 st.set_page_config(
     page_title="ДАМУ — проекты",
@@ -131,8 +131,11 @@ def show_metrics(df: pd.DataFrame) -> None:
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Проектов", f"{len(df):,}".replace(",", " "))
     c2.metric("Уникальных компаний", f"{companies:,}".replace(",", " "))
-    c3.metric("Сумма кредитов", format_amount(total_credit) + " ₸")
-    c4.metric("Сумма гарантий", format_amount(total_guarantee) + " ₸")
+
+    credit_short, credit_full = format_amount_compact(total_credit)
+    guarantee_short, guarantee_full = format_amount_compact(total_guarantee)
+    c3.metric("Сумма кредитов", credit_short, help=credit_full)
+    c4.metric("Сумма гарантий", guarantee_short, help=guarantee_full)
 
 
 def show_charts(df: pd.DataFrame) -> None:

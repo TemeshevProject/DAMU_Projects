@@ -96,3 +96,23 @@ def format_amount(value: float | int | None) -> str:
     if value is None or pd.isna(value):
         return "—"
     return f"{value:,.0f}".replace(",", " ")
+
+
+def format_amount_compact(value: float | int | None) -> tuple[str, str]:
+    """Короткий формат для метрик + полная сумма для подсказки."""
+    if value is None or pd.isna(value):
+        return "—", "—"
+
+    v = float(value)
+    full = f"{format_amount(v)} ₸"
+
+    if abs(v) >= 1e12:
+        short = f"{v / 1e12:.2f} трлн ₸".replace(".", ",")
+    elif abs(v) >= 1e9:
+        short = f"{v / 1e9:.2f} млрд ₸".replace(".", ",")
+    elif abs(v) >= 1e6:
+        short = f"{v / 1e6:.2f} млн ₸".replace(".", ",")
+    else:
+        short = full
+
+    return short, full
