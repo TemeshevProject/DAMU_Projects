@@ -1,0 +1,147 @@
+"""Конфигурация источников и маппинг отчётов."""
+
+BASE_URL = "https://damu.kz"
+REPORTS_PAGE = f"{BASE_URL}/ru/reports/"
+
+# Ключевые слова в URL/имени файла → тип поддержки
+REPORT_TYPE_KEYWORDS = {
+    "subsidization": [
+        "субсидирован",
+        "subsidy",
+        "mti",
+        "свт",
+        "внутренн",
+    ],
+    "guarantee": [
+        "гарантир",
+        "гарантий",
+        "кепілдік",
+        "кқ",
+        "гф",
+        "впиур",
+        "ппрк",
+    ],
+    "orleu": ["өрлеу", "orleu"],
+    "manufacturing": ["обрабатывающ", "мп_", "нф"],
+    "green": ["зелен", "green"],
+}
+
+# Известные листы и строка заголовка для основных отчётов
+SHEET_PARSERS = {
+    "subsidization_main": {
+        "sheet_names": ["Свод все направ за весь пер"],
+        "header_row": 1,
+        "column_map": {
+            "№": "row_number",
+            "Регион": "region",
+            "Район": "district",
+            "Заемщик.Наименование": "company_name",
+            "Заемщик.Юр статус": "legal_form",
+            "Заемщик.Пол руководителя": "ceo_gender",
+            "Секция.Наименование": "oked_section",
+            "Раздел. Окэд": "oked_division",
+            "Подкласс.Наименование": "oked_subclass",
+            "Проект.Наименование": "project_name",
+            "Проект.Бизнес по проекту": "project_type",
+            "БВУ/ЛК/МФО и тд( источник финанс.) ": "bank",
+            "Заемщик.Размер бизнеса субъекта": "business_size",
+            "Сумма кредита, одобренная к субсидированию": "credit_amount",
+            "Программа": "program",
+            "Год": "year",
+            "Месяц": "month",
+        },
+        "support_type": "subsidization",
+    },
+    "guarantee_gf": {
+        "sheet_names": ["Подписанные ДГ по ГФ 1 и ГФ 2"],
+        "header_row": 0,
+        "column_map": {
+            "ОПФ": "legal_form",
+            "Наименование": "company_name",
+            "Цель кредитования": "project_type",
+            "Название": "project_name",
+            "Отрасль": "oked_section",
+            "Подотрасль": "oked_subclass",
+            "Кредитор": "bank",
+            "Сумма кредита": "credit_amount",
+            "Сумма гарантии": "guarantee_amount",
+            "Место обращения предпринимателя": "application_office",
+            "Город/район реализации проекта": "district",
+            "Область реализации проекта": "region",
+            "Субъектность": "business_size",
+            "Программа": "program",
+            "Период": "period",
+        },
+        "support_type": "guarantee",
+    },
+    "guarantee_vpiur": {
+        "sheet_names": ["подписанные проекты-весь период"],
+        "header_row": 0,
+        "column_map": {
+            "ОПФ": "legal_form",
+            "Наименование заемщика": "company_name",
+            "Цель кредитования": "project_type",
+            "Описание проекта": "project_name",
+            "Отрасль": "oked_section",
+            "Подотрасль": "oked_subclass",
+            "Банк кредитор": "bank",
+            "Сумма кредита (тенге)": "credit_amount",
+            "Сумма гарантии (тенге)": "guarantee_amount",
+            "Место обращения предпринимателя": "application_office",
+            "Область реализации проекта": "region",
+            "Город/Район": "district",
+            "Программа гарантирования": "program",
+            "Тип субъекта": "business_size",
+            "Год": "year",
+        },
+        "support_type": "guarantee",
+    },
+    "guarantee_svt": {
+        "sheet_names": ["подписанные проекты"],
+        "header_row": 0,
+        "column_map": {
+            "ОПФ": "legal_form",
+            "Наименование заемщика": "company_name",
+            "Цель кредитования": "project_type",
+            "Описание проекта": "project_name",
+            "Отрасль": "oked_section",
+            "Подотрасль": "oked_subclass",
+            "Банк кредитор": "bank",
+            "Сумма кредита (тенге)": "credit_amount",
+            "Сумма гарантии (тенге)": "guarantee_amount",
+            "Регион": "region",
+            "Город/Район": "district",
+            "Программа гарантирования": "program",
+            "Тип субъекта": "business_size",
+            "Год": "year",
+        },
+        "support_type": "guarantee",
+    },
+    "guarantee_gf_kz": {
+        "sheet_names": ["КҚ 1 және КҚ 2 бойынша қол қойы"],
+        "header_row": 0,
+        "column_map": {
+            "ҰҚН": "legal_form",
+            "Атауы": "company_name",
+            "Кредиттеу мақсаты": "project_type",
+            "Жоба атауы": "project_name",
+            "Сала": "oked_section",
+            "Кіші сала": "oked_subclass",
+            "Кредитор": "bank",
+            "Кредит сомасы": "credit_amount",
+            "Кепілдік сомасы": "guarantee_amount",
+            "Кәсіпкердің өтініш беру орны": "application_office",
+            "Жобаны іске асыру қаласы/ауданы": "district",
+            "Жобаны іске асыру облысы": "region",
+            "Субъектілік": "business_size",
+            "Бағдарлама": "program",
+            "Кезең": "period",
+        },
+        "support_type": "guarantee",
+    },
+}
+
+# При автозагрузке для типов с несколькими вариантами отчёта — эвристики выбора
+DOWNLOAD_SKIP_SUBSTRINGS = {
+    "subsidization": ["каз", "(гос)", "гос).xlsx"],
+}
