@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -47,6 +49,25 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
             | filtered["project_name"].fillna("").str.contains(term, case=False, na=False)
         )
         filtered = filtered[mask]
+
+    if st.session_state.get("bin_filter"):
+        term = st.session_state["bin_filter"].strip()
+        mask = filtered["bin"].fillna("").str.contains(term, na=False)
+        filtered = filtered[mask]
+
+    if st.session_state.get("iin_filter"):
+        term = st.session_state["iin_filter"].strip()
+        mask = filtered["iin"].fillna("").str.contains(term, na=False)
+        filtered = filtered[mask]
+
+    if st.session_state.get("id_filter"):
+        term = re.sub(r"\D", "", st.session_state["id_filter"])
+        if term:
+            mask = (
+                filtered["bin"].fillna("").str.contains(term, na=False)
+                | filtered["iin"].fillna("").str.contains(term, na=False)
+            )
+            filtered = filtered[mask]
 
     if st.session_state.get("regions"):
         filtered = filtered[filtered["region"].isin(st.session_state["regions"])]
@@ -98,6 +119,24 @@ def sidebar_filters(df: pd.DataFrame) -> None:
         "Поиск (компания / проект)",
         key="search",
         placeholder="Например: макарон, ForteBank…",
+    )
+
+    st.sidebar.text_input(
+        "БИН",
+        key="bin_filter",
+        placeholder="12 цифр или часть",
+    )
+
+    st.sidebar.text_input(
+        "ИИН",
+        key="iin_filter",
+        placeholder="12 цифр или часть",
+    )
+
+    st.sidebar.text_input(
+        "БИН или ИИН",
+        key="id_filter",
+        placeholder="Любой идентификатор",
     )
 
     regions = sorted(df["region"].dropna().unique().tolist())
@@ -315,7 +354,8 @@ def main() -> None:
     st.title("ДАМУ — проекты")
     st.caption(
         "Открытые отчёты [damu.kz](https://damu.kz/ru/reports/) · "
-        "субсидирование и гарантирование · адаптировано для телефона"
+        "БИН — реестр ЮЛ [data.egov.kz](https://data.egov.kz/datasets/view?index=gbd_ul) · "
+        "ИИН для ИП в открытых отчётах ДАМУ не публикуется"
     )
 
     try:

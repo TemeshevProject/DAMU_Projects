@@ -103,6 +103,22 @@ python -m damu_parser.cli --parse --region "Алмат"
 python -m damu_parser.cli --parse --files data/raw/Отчет\ по\ проектам\ субсидирования\ на\ 01.08.2026г.xlsx
 ```
 
+### БИН и ИИН
+
+В Excel ДАМУ **нет** БИН/ИИН. Парсер обогащает данные из открытого реестра ЮЛ [data.egov.kz/datasets/view?index=gbd_ul](https://data.egov.kz/datasets/view?index=gbd_ul):
+
+```bash
+# Полное обогащение (реестр ~1 млн записей, 20–40 минут)
+python3 -m damu_parser.registry --max-chunks 9912
+python3 -m damu_parser.enrich_ids
+
+# Быстрый тест (часть реестра)
+python3 -m damu_parser.enrich_ids --max-chunks 500
+```
+
+- **БИН** — для ТОО, АО, КХ и др. (сопоставление по названию)
+- **ИИН** — для ИП в открытом реестре ЮЛ **не публикуется**; колонка заполняется только при редких совпадениях. Для полного ИИН нужен API КГД (токен)
+
 ## Ограничения
 
 - Публичного API ДАМУ нет — только Excel/PDF на сайте.

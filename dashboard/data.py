@@ -15,6 +15,8 @@ PARQUET_PATH = DEFAULT_DATA_DIR / "damu_projects.parquet"
 DISPLAY_COLUMNS = [
     "company_name",
     "legal_form",
+    "bin",
+    "iin",
     "project_name",
     "project_type",
     "oked_code",
@@ -36,6 +38,8 @@ DISPLAY_COLUMNS = [
 # Ключевые колонки для мобильного / краткого вида таблицы
 MOBILE_DISPLAY_COLUMNS = [
     "company_name",
+    "bin",
+    "iin",
     "project_name",
     "oked_code",
     "region",
@@ -47,6 +51,8 @@ MOBILE_DISPLAY_COLUMNS = [
 COLUMN_LABELS = {
     "company_name": "Компания",
     "legal_form": "ОПФ",
+    "bin": "БИН",
+    "iin": "ИИН",
     "project_name": "Проект",
     "project_type": "Цель кредита",
     "oked_code": "Код ОКЭД",
@@ -95,8 +101,12 @@ def load_projects(data_dir: Path = DEFAULT_DATA_DIR) -> pd.DataFrame:
         return pd.read_parquet(parquet_path)
 
     if csv_path.exists():
-        ensure_parquet(csv_path, parquet_path)
-        return pd.read_parquet(parquet_path)
+    ensure_parquet(csv_path, parquet_path)
+    df = pd.read_parquet(parquet_path)
+    for col in ("bin", "iin"):
+        if col not in df.columns:
+            df[col] = None
+    return df
 
     # Облако: скачать с damu.kz при первом запуске
     bootstrap_data_from_damu()
