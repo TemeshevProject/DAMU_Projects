@@ -1,6 +1,12 @@
-"""Точка входа для Streamlit Community Cloud (main file path)."""
+"""Точка входа для Streamlit Community Cloud."""
 
+import sys
 from pathlib import Path
-import runpy
 
-runpy.run_path(str(Path(__file__).parent / "dashboard" / "app.py"), run_name="__main__")
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from dashboard.app import main
+
+main()

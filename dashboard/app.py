@@ -6,9 +6,6 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-<<<<<<< HEAD
-from dashboard.data import COLUMN_LABELS, DISPLAY_COLUMNS, format_amount, format_amount_compact, load_projects
-=======
 from dashboard.data import (
     COLUMN_LABELS,
     DISPLAY_COLUMNS,
@@ -17,7 +14,6 @@ from dashboard.data import (
     load_projects,
 )
 from dashboard.mobile import chart_layout_kwargs, inject_mobile_styles, plotly_mobile_config
->>>>>>> cursor/damu-projects-parser-0a3a
 
 st.set_page_config(
     page_title="ДАМУ — проекты",
@@ -175,20 +171,9 @@ def show_metrics(df: pd.DataFrame) -> None:
     total_guarantee = df["guarantee_amount"].fillna(0).sum()
     companies = df["company_name"].nunique()
 
-<<<<<<< HEAD
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Проектов", f"{len(df):,}".replace(",", " "))
-    c2.metric("Уникальных компаний", f"{companies:,}".replace(",", " "))
-
-    credit_short, credit_full = format_amount_compact(total_credit)
-    guarantee_short, guarantee_full = format_amount_compact(total_guarantee)
-    c3.metric("Сумма кредитов", credit_short, help=credit_full)
-    c4.metric("Сумма гарантий", guarantee_short, help=guarantee_full)
-=======
     credit_short, credit_full = format_amount_compact(total_credit)
     guarantee_short, guarantee_full = format_amount_compact(total_guarantee)
 
-    # 2×2 — читается на телефоне и на десктопе
     r1_left, r1_right = st.columns(2)
     r1_left.metric("Проектов", f"{len(df):,}".replace(",", " "))
     r1_right.metric("Компаний", f"{companies:,}".replace(",", " "))
@@ -200,7 +185,6 @@ def show_metrics(df: pd.DataFrame) -> None:
 
 def _plot_chart(fig) -> None:
     st.plotly_chart(fig, width="stretch", config=PLOTLY_CONFIG)
->>>>>>> cursor/damu-projects-parser-0a3a
 
 
 def show_charts(df: pd.DataFrame) -> None:
