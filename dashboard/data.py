@@ -33,6 +33,17 @@ DISPLAY_COLUMNS = [
     "source_file",
 ]
 
+# Ключевые колонки для мобильного / краткого вида таблицы
+MOBILE_DISPLAY_COLUMNS = [
+    "company_name",
+    "project_name",
+    "oked_code",
+    "region",
+    "credit_amount",
+    "program",
+    "support_type",
+]
+
 COLUMN_LABELS = {
     "company_name": "Компания",
     "legal_form": "ОПФ",
