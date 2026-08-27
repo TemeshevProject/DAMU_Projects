@@ -6,19 +6,30 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from dashboard.data import COLUMN_LABELS, DISPLAY_COLUMNS, format_amount, load_projects
+from dashboard.data import (
+    COLUMN_LABELS,
+    DISPLAY_COLUMNS,
+    MOBILE_DISPLAY_COLUMNS,
+    format_amount_compact,
+    load_projects,
+)
+from dashboard.mobile import chart_layout_kwargs, inject_mobile_styles, plotly_mobile_config
 
 st.set_page_config(
     page_title="ДАМУ — проекты",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
+
+inject_mobile_styles()
 
 SUPPORT_LABELS = {
     "subsidization": "Субсидирование",
     "guarantee": "Гарантирование",
 }
+
+PLOTLY_CONFIG = plotly_mobile_config()
 
 
 @st.cache_data(show_spinner="Загрузка данных ДАМУ (при первом запуске может занять 1–2 минуты)...")
@@ -67,57 +78,89 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     return filtered
 
 
+def quick_filters_hint() -> None:
+    """Подсказка для мобильных — фильтры только в боковой панели."""
+    with st.expander("🔍 Как фильтровать на телефоне", expanded=False):
+        st.markdown(
+            "1. Нажмите **☰** вверху слева\n"
+            "2. Выберите регион, ОКЭД, банк и другие фильтры\n"
+            "3. Закройте панель — дашборд обновится автоматически"
+        )
+
+
 def sidebar_filters(df: pd.DataFrame) -> None:
     st.sidebar.header("Фильтры")
+    st.sidebar.caption("На телефоне: откройте панель через ☰ вверху.")
 
-    st.session_state["search"] = st.sidebar.text_input(
+    if "search" not in st.session_state:
+        st.session_state["search"] = ""
+    st.sidebar.text_input(
         "Поиск (компания / проект)",
-        value=st.session_state.get("search", ""),
+        key="search",
+        placeholder="Например: макарон, ForteBank…",
     )
 
     regions = sorted(df["region"].dropna().unique().tolist())
-    st.session_state["regions"] = st.sidebar.multiselect("Регион", regions)
+    if "regions" not in st.session_state:
+        st.session_state["regions"] = []
+    st.sidebar.multiselect("Регион", regions, key="regions")
 
     support_types = sorted(df["support_type"].dropna().unique().tolist())
-    st.session_state["support_types"] = st.sidebar.multiselect(
+    if "support_types" not in st.session_state:
+        st.session_state["support_types"] = []
+    st.sidebar.multiselect(
         "Тип поддержки",
         support_types,
+        key="support_types",
         format_func=lambda x: SUPPORT_LABELS.get(x, x),
     )
 
     programs = sorted(df["program"].dropna().unique().tolist())
-    st.session_state["programs"] = st.sidebar.multiselect("Программа", programs)
+    if "programs" not in st.session_state:
+        st.session_state["programs"] = []
+    st.sidebar.multiselect("Программа", programs, key="programs")
 
     banks = sorted(df["bank"].dropna().unique().tolist())
-    st.session_state["banks"] = st.sidebar.multiselect("Банк", banks)
+    if "banks" not in st.session_state:
+        st.session_state["banks"] = []
+    st.sidebar.multiselect("Банк", banks, key="banks")
 
     legal_forms = sorted(df["legal_form"].dropna().unique().tolist())
-    st.session_state["legal_forms"] = st.sidebar.multiselect("ОПФ", legal_forms)
+    if "legal_forms" not in st.session_state:
+        st.session_state["legal_forms"] = []
+    st.sidebar.multiselect("ОПФ", legal_forms, key="legal_forms")
 
-    st.session_state["oked_prefix"] = st.sidebar.text_input(
+    if "oked_prefix" not in st.session_state:
+        st.session_state["oked_prefix"] = ""
+    st.sidebar.text_input(
         "Код ОКЭД (префикс)",
-        value=st.session_state.get("oked_prefix", ""),
+        key="oked_prefix",
         help="Например: 47 — розничная торговля",
     )
 
     years = sorted([int(y) for y in df["year"].dropna().unique().tolist()])
-    st.session_state["years"] = st.sidebar.multiselect("Год", years)
+    if "years" not in st.session_state:
+        st.session_state["years"] = []
+    st.sidebar.multiselect("Год", years, key="years")
 
     max_credit = float(df["credit_amount"].fillna(0).max() or 0)
+    default_max = int(max_credit) if max_credit > 0 else 1
+    if "min_amount" not in st.session_state:
+        st.session_state["min_amount"] = 0
+    if "max_amount" not in st.session_state:
+        st.session_state["max_amount"] = default_max
+
     amount_range = st.sidebar.slider(
         "Сумма кредита, ₸",
         min_value=0,
-        max_value=int(max_credit) if max_credit > 0 else 1,
-        value=(
-            st.session_state.get("min_amount", 0),
-            st.session_state.get("max_amount", int(max_credit) if max_credit > 0 else 1),
-        ),
+        max_value=default_max,
+        value=(st.session_state["min_amount"], st.session_state["max_amount"]),
         step=1_000_000,
     )
     st.session_state["min_amount"] = amount_range[0]
     st.session_state["max_amount"] = amount_range[1]
 
-    if st.sidebar.button("Сбросить фильтры"):
+    if st.sidebar.button("Сбросить фильтры", use_container_width=True):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
@@ -128,38 +171,47 @@ def show_metrics(df: pd.DataFrame) -> None:
     total_guarantee = df["guarantee_amount"].fillna(0).sum()
     companies = df["company_name"].nunique()
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Проектов", f"{len(df):,}".replace(",", " "))
-    c2.metric("Уникальных компаний", f"{companies:,}".replace(",", " "))
-    c3.metric("Сумма кредитов", format_amount(total_credit) + " ₸")
-    c4.metric("Сумма гарантий", format_amount(total_guarantee) + " ₸")
+    credit_short, credit_full = format_amount_compact(total_credit)
+    guarantee_short, guarantee_full = format_amount_compact(total_guarantee)
+
+    # 2×2 — читается на телефоне и на десктопе
+    r1_left, r1_right = st.columns(2)
+    r1_left.metric("Проектов", f"{len(df):,}".replace(",", " "))
+    r1_right.metric("Компаний", f"{companies:,}".replace(",", " "))
+
+    r2_left, r2_right = st.columns(2)
+    r2_left.metric("Сумма кредитов", credit_short, help=credit_full)
+    r2_right.metric("Сумма гарантий", guarantee_short, help=guarantee_full)
+
+
+def _plot_chart(fig) -> None:
+    st.plotly_chart(fig, width="stretch", config=PLOTLY_CONFIG)
 
 
 def show_charts(df: pd.DataFrame) -> None:
     chart_df = df.copy()
     chart_df["credit_amount"] = chart_df["credit_amount"].fillna(0)
 
+    by_region = (
+        chart_df.groupby("region", as_index=False)["credit_amount"]
+        .sum()
+        .sort_values("credit_amount", ascending=False)
+        .head(10)
+    )
+    fig = px.bar(
+        by_region,
+        x="credit_amount",
+        y="region",
+        orientation="h",
+        title="Топ-10 регионов по сумме кредитов",
+        labels={"credit_amount": "Сумма, ₸", "region": "Регион"},
+    )
+    fig.update_layout(**chart_layout_kwargs(340))
+    _plot_chart(fig)
+
     left, right = st.columns(2)
 
     with left:
-        by_region = (
-            chart_df.groupby("region", as_index=False)["credit_amount"]
-            .sum()
-            .sort_values("credit_amount", ascending=False)
-            .head(15)
-        )
-        fig = px.bar(
-            by_region,
-            x="credit_amount",
-            y="region",
-            orientation="h",
-            title="Топ-15 регионов по сумме кредитов",
-            labels={"credit_amount": "Сумма, ₸", "region": "Регион"},
-        )
-        fig.update_layout(height=420, margin=dict(l=10, r=10, t=40, b=10))
-        st.plotly_chart(fig, use_container_width=True)
-
-    with right:
         by_support = (
             chart_df.groupby("support_type", as_index=False)
             .agg(count=("company_name", "count"), amount=("credit_amount", "sum"))
@@ -171,84 +223,100 @@ def show_charts(df: pd.DataFrame) -> None:
             by_support,
             names="label",
             values="count",
-            title="Структура по типу поддержки (кол-во)",
+            title="Тип поддержки (кол-во)",
             hole=0.35,
         )
-        fig.update_layout(height=420, margin=dict(l=10, r=10, t=40, b=10))
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(**chart_layout_kwargs(320))
+        _plot_chart(fig)
 
-    left2, right2 = st.columns(2)
-
-    with left2:
-        by_year = (
-            chart_df.dropna(subset=["year"])
-            .groupby("year", as_index=False)
-            .agg(count=("company_name", "count"), amount=("credit_amount", "sum"))
-        )
-        if not by_year.empty:
-            fig = px.line(
-                by_year,
-                x="year",
-                y="amount",
-                markers=True,
-                title="Динамика суммы кредитов по годам",
-                labels={"amount": "Сумма, ₸", "year": "Год"},
-            )
-            fig.update_layout(height=360, margin=dict(l=10, r=10, t=40, b=10))
-            st.plotly_chart(fig, use_container_width=True)
-
-    with right2:
+    with right:
         by_oked = (
             chart_df.groupby("oked_code", as_index=False)["credit_amount"]
             .sum()
             .sort_values("credit_amount", ascending=False)
-            .head(12)
+            .head(8)
         )
         fig = px.bar(
             by_oked,
             x="oked_code",
             y="credit_amount",
-            title="Топ-12 кодов ОКЭД по сумме кредитов",
+            title="Топ-8 кодов ОКЭД",
             labels={"credit_amount": "Сумма, ₸", "oked_code": "ОКЭД"},
         )
-        fig.update_layout(height=360, margin=dict(l=10, r=10, t=40, b=10))
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(**chart_layout_kwargs(320))
+        _plot_chart(fig)
+
+    by_year = (
+        chart_df.dropna(subset=["year"])
+        .groupby("year", as_index=False)
+        .agg(count=("company_name", "count"), amount=("credit_amount", "sum"))
+    )
+    if not by_year.empty:
+        fig = px.line(
+            by_year,
+            x="year",
+            y="amount",
+            markers=True,
+            title="Динамика суммы кредитов по годам",
+            labels={"amount": "Сумма, ₸", "year": "Год"},
+        )
+        fig.update_layout(**chart_layout_kwargs(300))
+        _plot_chart(fig)
+
+
+def _prepare_table_view(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    cols = [c for c in columns if c in df.columns]
+    view = df[cols].copy()
+    return view.rename(columns={c: COLUMN_LABELS.get(c, c) for c in cols})
 
 
 def show_table(df: pd.DataFrame) -> None:
     st.subheader("Детальная таблица")
 
-    cols = [c for c in DISPLAY_COLUMNS if c in df.columns]
-    view = df[cols].copy()
-    view = view.rename(columns={c: COLUMN_LABELS.get(c, c) for c in cols})
+    tab_short, tab_full = st.tabs(["Кратко (для телефона)", "Все поля"])
 
-    st.caption(f"Показано {len(view):,} записей. Таблица поддерживает сортировку и прокрутку.".replace(",", " "))
+    with tab_short:
+        view = _prepare_table_view(df, MOBILE_DISPLAY_COLUMNS)
+        st.caption(f"{len(view):,} записей — свайп влево для прокрутки колонок".replace(",", " "))
+        st.dataframe(
+            view,
+            width="stretch",
+            height=380,
+            column_config={
+                COLUMN_LABELS["credit_amount"]: st.column_config.NumberColumn(format="%,.0f"),
+            },
+        )
 
-    st.dataframe(
-        view,
-        use_container_width=True,
-        height=520,
-        column_config={
-            COLUMN_LABELS["credit_amount"]: st.column_config.NumberColumn(format="%,.0f"),
-            COLUMN_LABELS["guarantee_amount"]: st.column_config.NumberColumn(format="%,.0f"),
-        },
-    )
+    with tab_full:
+        view = _prepare_table_view(df, DISPLAY_COLUMNS)
+        st.caption(f"{len(view):,} записей".replace(",", " "))
+        st.dataframe(
+            view,
+            width="stretch",
+            height=420,
+            column_config={
+                COLUMN_LABELS["credit_amount"]: st.column_config.NumberColumn(format="%,.0f"),
+                COLUMN_LABELS["guarantee_amount"]: st.column_config.NumberColumn(format="%,.0f"),
+            },
+        )
 
-    csv_bytes = view.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+    csv_bytes = _prepare_table_view(df, DISPLAY_COLUMNS).to_csv(
+        index=False, encoding="utf-8-sig"
+    ).encode("utf-8-sig")
     st.download_button(
-        "Скачать отфильтрованные данные (CSV)",
+        "Скачать CSV",
         data=csv_bytes,
         file_name="damu_filtered.csv",
         mime="text/csv",
+        use_container_width=True,
     )
 
 
 def main() -> None:
-    st.title("ДАМУ — проекты с государственной поддержкой")
-    st.markdown(
-        "Интерактивный дашборд по открытым отчётам "
-        "[damu.kz/ru/reports/](https://damu.kz/ru/reports/). "
-        "Данные: субсидирование и гарантирование."
+    st.title("ДАМУ — проекты")
+    st.caption(
+        "Открытые отчёты [damu.kz](https://damu.kz/ru/reports/) · "
+        "субсидирование и гарантирование · адаптировано для телефона"
     )
 
     try:
@@ -257,6 +325,7 @@ def main() -> None:
         st.error(str(exc))
         st.stop()
 
+    quick_filters_hint()
     sidebar_filters(df)
     filtered = apply_filters(df)
 
