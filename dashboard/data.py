@@ -93,24 +93,27 @@ def ensure_parquet(csv_path: Path = CSV_PATH, parquet_path: Path = PARQUET_PATH)
     return parquet_path
 
 
-def load_projects(data_dir: Path = DEFAULT_DATA_DIR) -> pd.DataFrame:
-    parquet_path = data_dir / "damu_projects.parquet"
-    csv_path = data_dir / "damu_projects.csv"
-
-    if parquet_path.exists():
-        return pd.read_parquet(parquet_path)
-
-    if csv_path.exists():
-    ensure_parquet(csv_path, parquet_path)
-    df = pd.read_parquet(parquet_path)
+def _ensure_id_columns(df: pd.DataFrame) -> pd.DataFrame:
     for col in ("bin", "iin"):
         if col not in df.columns:
             df[col] = None
     return df
 
+
+def load_projects(data_dir: Path = DEFAULT_DATA_DIR) -> pd.DataFrame:
+    parquet_path = data_dir / "damu_projects.parquet"
+    csv_path = data_dir / "damu_projects.csv"
+
+    if parquet_path.exists():
+        return _ensure_id_columns(pd.read_parquet(parquet_path))
+
+    if csv_path.exists():
+        ensure_parquet(csv_path, parquet_path)
+        return _ensure_id_columns(pd.read_parquet(parquet_path))
+
     # Облако: скачать с damu.kz при первом запуске
     bootstrap_data_from_damu()
-    return pd.read_parquet(CLOUD_PARQUET)
+    return _ensure_id_columns(pd.read_parquet(CLOUD_PARQUET))
 
 
 def format_amount(value: float | int | None) -> str:
