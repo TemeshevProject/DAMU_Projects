@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from io import BytesIO
 
 import pandas as pd
 import plotly.express as px
@@ -308,6 +309,12 @@ def _prepare_table_view(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     return view.rename(columns={c: COLUMN_LABELS.get(c, c) for c in cols})
 
 
+def _dataframe_to_xlsx_bytes(df: pd.DataFrame) -> bytes:
+    buffer = BytesIO()
+    df.to_excel(buffer, index=False, engine="openpyxl")
+    return buffer.getvalue()
+
+
 def show_table(df: pd.DataFrame) -> None:
     st.subheader("Детальная таблица")
 
@@ -338,16 +345,29 @@ def show_table(df: pd.DataFrame) -> None:
             },
         )
 
-    csv_bytes = _prepare_table_view(df, DISPLAY_COLUMNS).to_csv(
-        index=False, encoding="utf-8-sig"
-    ).encode("utf-8-sig")
-    st.download_button(
-        "Скачать CSV",
-        data=csv_bytes,
-        file_name="damu_filtered.csv",
-        mime="text/csv",
-        use_container_width=True,
-    )
+    export_view = _prepare_table_view(df, DISPLAY_COLUMNS)
+    csv_bytes = export_view.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+    xlsx_bytes = _dataframe_to_xlsx_bytes(export_view)
+
+    col_csv, col_xlsx = st.columns(2)
+    with col_csv:
+        st.download_button(
+            "Скачать CSV",
+            data=csv_bytes,
+            file_name="damu_filtered.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with col_xlsx:
+        st.download_button(
+            "Скачать Excel (.xlsx)",
+            data=xlsx_bytes,
+            file_name="damu_filtered.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+    if len(export_view) > 50_000:
+        st.caption("Большой объём данных: Excel может формироваться 10–30 секунд.")
 
 
 def main() -> None:
