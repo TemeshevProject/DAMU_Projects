@@ -309,6 +309,10 @@ def _prepare_table_view(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     return view.rename(columns={c: COLUMN_LABELS.get(c, c) for c in cols})
 
 
+EXCEL_LAZY_ROW_THRESHOLD = 5_000
+
+
+@st.cache_data(show_spinner="Формируем Excel…")
 def _dataframe_to_xlsx_bytes(df: pd.DataFrame) -> bytes:
     buffer = BytesIO()
     df.to_excel(buffer, index=False, engine="openpyxl")
@@ -347,7 +351,7 @@ def show_table(df: pd.DataFrame) -> None:
 
     export_view = _prepare_table_view(df, DISPLAY_COLUMNS)
     csv_bytes = export_view.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-    xlsx_bytes = _dataframe_to_xlsx_bytes(export_view)
+    row_count = len(export_view)
 
     col_csv, col_xlsx = st.columns(2)
     with col_csv:
@@ -359,15 +363,31 @@ def show_table(df: pd.DataFrame) -> None:
             use_container_width=True,
         )
     with col_xlsx:
-        st.download_button(
-            "Скачать Excel (.xlsx)",
-            data=xlsx_bytes,
-            file_name="damu_filtered.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-    if len(export_view) > 50_000:
-        st.caption("Большой объём данных: Excel может формироваться 10–30 секунд.")
+        xlsx_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        if row_count > EXCEL_LAZY_ROW_THRESHOLD:
+            if st.session_state.get("xlsx_row_count") != row_count:
+                st.session_state.pop("xlsx_bytes", None)
+                st.session_state["xlsx_row_count"] = row_count
+            if st.button("Подготовить Excel (.xlsx)", use_container_width=True, key="prep_xlsx"):
+                st.session_state["xlsx_bytes"] = _dataframe_to_xlsx_bytes(export_view)
+            if st.session_state.get("xlsx_bytes"):
+                st.download_button(
+                    "Скачать Excel (.xlsx)",
+                    data=st.session_state["xlsx_bytes"],
+                    file_name="damu_filtered.xlsx",
+                    mime=xlsx_mime,
+                    use_container_width=True,
+                )
+            else:
+                st.caption("Для большой выборки сначала подготовьте файл (до ~30 сек).")
+        else:
+            st.download_button(
+                "Скачать Excel (.xlsx)",
+                data=_dataframe_to_xlsx_bytes(export_view),
+                file_name="damu_filtered.xlsx",
+                mime=xlsx_mime,
+                use_container_width=True,
+            )
 
 
 def main() -> None:
